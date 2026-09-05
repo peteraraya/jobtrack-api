@@ -92,4 +92,6 @@ Listo. Fin.
 | "¿Refresh rotation seguro?"           | War story #3 + e2e del caso negativo                                                    |
 | "¿Cómo despliegas?"                   | `docker compose up -d --build` + GH Actions: audit → build → smoke contra el contenedor |
 
+Para la siguiente ronda — preguntas de arquitectura, rendimiento, seguridad y el "¿qué harías distinto?" de un líder técnico — pasá a la guía completa: [Preguntas de líder técnico](/guide/tech-lead-questions).
+
 Anterior: [War stories](/guide/war-stories)

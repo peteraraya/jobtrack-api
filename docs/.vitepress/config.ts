@@ -37,6 +37,10 @@ export default defineConfig({
           },
           { text: 'War stories', link: '/guide/war-stories' },
           { text: 'Walkthrough', link: '/guide/walkthrough' },
+          {
+            text: 'Preguntas de líder técnico',
+            link: '/guide/tech-lead-questions',
+          },
         ],
       },
       {

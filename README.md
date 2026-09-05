@@ -524,7 +524,7 @@ El workflow `.github/workflows/docs.yml` publica la guía VitePress automáticam
 
 ## 🧠 Preparación para Entrevistas
 
-Cada módulo de esta guía incluye **retos tipo entrevista** con ejemplos reales del repositorio:
+Cada módulo de esta guía incluye **retos tipo entrevista** con ejemplos reales del repositorio. Para las preguntas de un **líder técnico** (arquitectura, rendimiento, seguridad, operación y el "cuéntame de ti") sumergite en la guía dedicada: [**Preguntas de líder técnico**](docs/guide/tech-lead-questions.md).
 
 - [x] ¿Puedo explicar DI y scopes de provider sin mirar código?
 - [x] ¿Puedo explicar la diferencia entre Guard, Interceptor, Pipe y Filter, y su orden de ejecución?
