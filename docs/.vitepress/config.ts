@@ -21,7 +21,7 @@ export default defineConfig({
       { text: 'Roadmap Original', link: '/roadmap' },
       {
         text: 'Repositorio',
-        link: 'https://github.com/tu-usuario/jobtrack-api',
+        link: 'https://github.com/peteraraya/jobtrack-api',
       },
     ],
     sidebar: [

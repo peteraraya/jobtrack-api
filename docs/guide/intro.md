@@ -43,7 +43,7 @@ Todo el roadmap está **completo** ✅ — de `npm run dev` a dos procesos en co
 
 - Conocimientos básicos de TypeScript
 - Node.js >= 18 instalado
-- [Sigue el inicio rápido del README](https://github.com/tu-usuario/jobtrack-api) para levantar el proyecto
+- [Sigue el inicio rápido del README](https://github.com/peteraraya/jobtrack-api) para levantar el proyecto
 
 ## Stack
 

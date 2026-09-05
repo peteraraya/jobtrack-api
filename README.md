@@ -87,7 +87,7 @@ Ver la historia completa en [docs/guide/war-stories.md](docs/guide/war-stories.m
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/tu-usuario/jobtrack-api.git
+git clone https://github.com/peteraraya/jobtrack-api.git
 
 # 2. Instalar dependencias
 npm install --legacy-peer-deps
@@ -508,7 +508,7 @@ El workflow `.github/workflows/docs.yml` publica la guía VitePress automáticam
 
 1. Crear el repositorio en GitHub.
 2. Activar **Settings → Pages → Source: GitHub Actions**.
-3. Pushear a `main` → `https://<tu-usuario>.github.io/jobtrack-api`.
+3. Pushear a `main` → `https://<peteraraya>.github.io/jobtrack-api`.
 
 ### 🐳 API — Docker y CI/CD (Módulo 11)
 

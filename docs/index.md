@@ -17,7 +17,7 @@ hero:
       link: /roadmap
     - theme: alt
       text: Código fuente
-      link: https://github.com/tu-usuario/jobtrack-api
+      link: https://github.com/peteraraya/jobtrack-api
 
 features:
   - icon: 🏗️
