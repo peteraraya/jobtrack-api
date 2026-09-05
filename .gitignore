@@ -38,9 +38,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# package-lock.json
-package-lock.json
-
 # VitePress docs build output
 docs/.vitepress/dist
 docs/.vitepress/cache
