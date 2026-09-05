@@ -1,0 +1,18 @@
+# Módulo 11 — Dependabot: escaneo automático de dependencias.
+# Las PRs de seguridad corren el gate de CI (test + audit + docker).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencias
+    # No mezcla breaking automáticamente: el humano revisa contra el checklist
+    # de seguridad (docs/guide/security-checklist.md).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5

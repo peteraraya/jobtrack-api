@@ -1,0 +1,49 @@
+# compiled output
+/dist
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classification
+*.swp
+*.swo
+*~
+
+# env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# package-lock.json
+package-lock.json
+
+# VitePress docs build output
+docs/.vitepress/dist
+docs/.vitepress/cache
+
+# TypeScript build info
+*.tsbuildinfo

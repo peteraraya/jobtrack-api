@@ -1,0 +1,17 @@
+# Módulo 11 — no contaminar el contexto de build (ni el cache de Docker).
+node_modules
+dist
+coverage
+.env
+.env.*
+!.env.example
+.git
+.github
+docs
+test
+*.log
+Dockerfile*
+docker-compose*.yml
+.DS_Store
+scripts/*.mjs
+!scripts/docker-entry.mjs

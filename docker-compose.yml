@@ -1,0 +1,112 @@
+# Módulo 11 — el sistema completo con UN solo comando:
+#
+#   docker compose up --build -d      # levanta todo
+#   docker compose ps                 # 4 servicios: postgres, redis, api, worker
+#   docker compose logs -f api        # sigue el API
+#
+# Variables: usa la sección `environment` de cada servicio. Para desarrollo
+# local podés setear los secrets vía un archivo `.env` (docker compose lo lee
+# automáticamente) y referenciarlos con ${VAR:-default}.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jobtrack-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: jobtrack
+      POSTGRES_PASSWORD: jobtrack
+      POSTGRES_DB: jobtrack
+    ports:
+      # La máquina tiene un PostgreSQL nativo en el 5432: el contenedor
+      # expone su puerto interno 5432 en el puerto anfitrión 5433.
+      - '5433:5432'
+    volumes:
+      - jobtrack_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jobtrack -d jobtrack']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Módulo 7: colas BullMQ (ingest de scraping + notificaciones). Redis hasta
+  # con AOF enable para que un crash del contenedor no pierda jobs pendientes.
+  redis:
+    image: redis:7-alpine
+    container_name: jobtrack-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - jobtrack_redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Módulo 11 — API (app Nest completa: HTTP /v1 + consumo de eventos Redis).
+  api:
+    build:
+      context: .
+    container_name: jobtrack-api
+    restart: unless-stopped
+    environment:
+      APP_PROCESS: api
+      NODE_ENV: production
+      PORT: '3000'
+      DATABASE_URL: postgresql://jobtrack:jobtrack@postgres:5432/jobtrack?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-please-change}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      JOB_SOURCES: ${JOB_SOURCES:-linkedin.com,computrabajo.com,gotajob.com}
+      SCRAPE_CRON_EXPR: ${SCRAPE_CRON_EXPR:-0 */6 * * *}
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health || exit 1']
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Módulo 11 — worker de scraping como proceso independiente (Módulo 9):
+  # mismo build, otro proceso (APP_PROCESS=worker → main-scraper.js).
+  worker:
+    build:
+      context: .
+    container_name: jobtrack-worker
+    restart: unless-stopped
+    environment:
+      APP_PROCESS: worker
+      NODE_ENV: production
+      DATABASE_URL: postgresql://jobtrack:jobtrack@postgres:5432/jobtrack?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-please-change}
+      JOB_SOURCES: ${JOB_SOURCES:-linkedin.com,computrabajo.com,gotajob.com}
+      SCRAPE_BREAKER_THRESHOLD: ${SCRAPE_BREAKER_THRESHOLD:-3}
+      SCRAPE_BREAKER_COOLDOWN_MS: ${SCRAPE_BREAKER_COOLDOWN_MS:-60000}
+      SCRAPE_FETCH_TIMEOUT_MS: ${SCRAPE_FETCH_TIMEOUT_MS:-5000}
+      SCRAPE_CRON_EXPR: ${SCRAPE_CRON_EXPR:-0 */6 * * *}
+    # El worker no expone HTTP: su salud es que el proceso node esté vivo.
+    healthcheck:
+      test: ['CMD-SHELL', 'ps -A | grep -q node || exit 1']
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  jobtrack_pgdata:
+  jobtrack_redisdata:
