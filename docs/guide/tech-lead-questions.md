@@ -150,6 +150,71 @@ Si publicara el evento en vez del comando, el trabajo quedaría sin dueño (nadi
 
 ---
 
+## 7. Conceptos de base — la analogía primero, el tecnicismo después
+
+> Un clásico de entrevista NestJS: te piden explicar un concepto "como si yo tuviera 10 años" y luego profundizan. **La trampa es quedarse en la analogía** — el líder profundiza hasta que vea que el tecnicismo es tuyo. La buena respuesta tiene **dos capas**: analogía de 2 líneas + terminología exacta con una referencia de tu repo.
+
+**Cómo practicar:** para cada concepto, en ese orden, y en 30 s: (1) la analogía de una frase, (2) la terminología exacta (scopes, container, metadata, obs streams…), (3) el archivo de tu repo donde vive. Si te tildás en el paso 2, no está "en la punta de la lengua": está hueco — lo repasás.
+
+| Concepto                              | La analogía (para "contáme como si tuviera 10 años")                                                                                                                             | El tecnicismo exacto (y dónde vive en el repo)                                                                                                                                                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Inyección de dependencias**         | El mozo te trae los ingredientes ya preparados según tu receta; vos no salís a comprarlos.                                                                                       | El contenedor de Nest resuelve e inyecta providers por constructor (`@Injectable`). Se declaran en `providers`/`imports` del `@Module`. Ver `src/modules/users/users.service.ts` inyectando repos y servicios.                                                                 |
+| **Controller / Service / Repository** | Recepcionista (recibe y valida el pedido) → chef (la receta, el negocio) → alacena (lo que dura guardado).                                                                       | Capas por responsabilidad: controlador maneja HTTP+DTO, service la regla de negocio, repository el acceso a datos detrás de una interfaz. `applications.controller → applications.service → TypeOrmApplicationsRepository`.                                                    |
+| **Módulo**                            | El índice del libro con permisos: qué capítulos importás y cuáles exportás.                                                                                                      | `@Module({ imports, controllers, providers, exports })`: encapsulación — fuera del módulo solo se ve lo exportado. `applications.module.ts`, `scraping.module.ts`.                                                                                                             |
+| **Guard vs Pipe**                     | Portería (dejás pasar? sos admin?) vs aduana (lo que pasa, lo convertís y validás).                                                                                              | Guard corre **antes** que los pipes y decide autorización (retorna bool/meta); Pipe transforma/valida el payload. Acá es `TrimPipe` → `ZodValidationPipe` ([link al ciclo](/guide/module-02)).                                                                                 |
+| **Middleware vs Interceptor**         | Guardia en la entrada del edificio (a todos los que entran) vs el equipo que envuelve tu oficina (antes y después de tu trabajo).                                                | Middleware corre antes del ruteo sin conocer handlers; Interceptor envuelve el handler con un Observable. Orden: middleware → guards → interceptor (pre) → pipes → handler → interceptor (post). `request-context.middleware` + `LoggingInterceptor`.                          |
+| **ExceptionFilter**                   | El protocolo de emergencia del edificio: cuando algo explota, un solo protocolo decide la forma del aviso.                                                                       | `@Catch()` global que traduce cualquier error (incluido Zod) al formato unificado de la API. `src/common/filters/all-exceptions.filter.ts`.                                                                                                                                    |
+| **Scopes + AsyncLocalStorage**        | Singleton = la única cajera del día; request = mesero asignado por mesa; transient = personal por pedido… pero acá ni hace falta: el expediente (carpeta) sigue al trámite solo. | `@Injectable({ scope })`: singleton (default), `REQUEST`, `TRANSIENT`. Este repo usa singleton + `AsyncLocalStorage` para contexto por request **sin** request-scope — esa es la ventaja: no pagás el costo de instanciar el árbol por request. `requestContext` + middleware. |
+| **RxJS**                              | La canilla que va de a chorros: abrís, transformás, cerrás — a diferencia del vaso (array) que se llena y listo.                                                                 | Nest está construido sobre RxJS; el transporte expone Observables. `lastValueFrom` aterriza un observable en un valor: `scraping.controller.ts:64` y `scraping-worker.service.ts:112`.                                                                                         |
+| **Los tres canales de mensaje**       | Intercom del edificio (EventEmitter2), radio pública (Redis transport), y casillero de tareas numerado con aviso (BullMQ).                                                       | Bus en proceso para eventos de dominio internos; pub/sub entre procesos (`@EventPattern`/`emit`); cola con persistencia, reintentos y dedup por `jobId` para trabajo. Los tres conviven en el scraping.                                                                        |
+| **DTO estricto (Zod)**                | Formulario con espacios fijos: campos de más no entran (`strict`) y el dato inválido da aviso claro en la entrada.                                                               | `z.object({...}).strict()` + pipe que transforma y valida antes del handler → `400` con formato propio. `IngestSchema` en `scraping/dto/`.                                                                                                                                     |
+| **JWT**                               | Credencial con fecha de vencimiento y sello (firma): se valida el sello, no se consulta una lista.                                                                               | Stateless: `JwtService.sign` + guard que verifica firma/exp y puebla `req.user`. `AuthGuard` + refresh rotation con hash en DB (war story #3).                                                                                                                                 |
+| **Migraciones**                       | El diario de obra: cada cambio de estructura queda anotado, con cómo se deshace.                                                                                                 | `synchronize: false` en prod + migraciones versionadas (up/down) corridas idempotentes en el entrypoint. `src/database/migrations/` + `scripts/docker-entry.mjs`.                                                                                                              |
+| **TestingModule**                     | Ensayo general con escenografía prestada: el sistema ensaya con fakes o con la base real sin ensuciar producción.                                                                | `Test.createTestingModule` con overrides de providers; e2e dropean schema y purgan colas. `test/` + `env.setup.ts` (carga `.env`).                                                                                                                                             |
+
+### Flashcards de repaso (las piden "en caliente")
+
+- ¿Dónde se registra un provider? → en `providers` del `@Module`.
+- ¿Qué corre primero, un Guard o un Pipe? → el Guard.
+- ¿Guard o Interceptor para autorizar? → Guard — el interceptor ni se ejecuta si un guard falla.
+- ¿Cómo haces visible algo de un módulo? → `exports`.
+- ¿Cómo aterrizas un Observable en un valor? → `lastValueFrom`/`firstValueFrom`.
+- ¿Estado por request sin request-scope? → `AsyncLocalStorage`.
+- ¿Qué hace `.strict()` en Zod? → rechaza claves que no están en el esquema.
+- ¿Qué es el `jobId` de BullMQ? → identidad estable del trabajo → dedup natural.
+- ¿`synchronize: true` en producción? → no — migraciones versionadas.
+- ¿Qué corre en el `/health` de este repo? → una comprobación **real** contra la DB, no un `"ok"` fijo.
+
+---
+
+## 8. Si en lugar de tu repo te piden diseñar un sistema (30 min)
+
+No te van a pedir "repetir JobTrack": te van a dar un problema abierto. El método que funciona, y que **ya usaste** para decidir el Módulo 9:
+
+1. **Preguntá antes de diseñar** — el 50% del puntaje está en las preguntas: ¿quiénes son los usuarios?, ¿qué volumen, qué picos?, ¿qué es lo que **no puede** fallar (dinero, datos del paciente), y qué tolera eventualidad?, ¿lecturas o escrituras? Un líder técnico escucha el orden de tus preguntas.
+2. **Borrador en cuatro cajas**: clientes → API/contratos → procesamiento (coloques/eventos) → storage/índices. No diseñes el interior de una caja antes que las otras.
+3. **Señalá el cuello de botella** y decí cuál atacarías primero y por qué — subir réplicas desnuda el siguiente problema; lo que importa es que sepas **qué orden** elegís y que lo justifiques.
+4. **Marcá la decisión más riesgosa** y cómo la validarías: "esta parte la empezártamos con un spike de X días" — los spikes son senior.
+
+**El ejemplo que ya tenés**: "diseñame JobTrack para 10M usuarios". Respuesta con tus propias decisiones: réplicas del API (las colas viven en Redis, no en memoria de un pod), worker escalando por cola e **idempotencia** (`ON CONFLICT`, `jobId`), el **evento `job-offer.created` como contrato de dominio** que no cambia si reemplazás el transporte, réplicas de lectura antes que cache por moda — y "lo que NO escalaría primero es el schema: acá hay que migraciones atómicas". Eso es diseñar con tu archivo de decisiones encima.
+
+---
+
+## 9. Las preguntas que vos le hacés al líder
+
+Quien pregunta demuestra seniority; quien solo responde parece pasivo. Estas seis — y por qué suman:
+
+1. **"¿Qué es lo que menos te gusta del stack o del código actual?"** — muestra interés real, invita a honestidad; casi siempre abre la conversación de backend de verdad.
+2. **"¿Cómo es el proceso de code review y de deploy acá?"** — señala que te importa calidad y operación, no solo "el ticket".
+3. **"¿Qué problema técnico está durmiendo al equipo últimamente?"** — foco en problemas (y vos recién mostraste cómo resolvés problemas).
+4. **"¿Qué pasa con la resiliencia acá: qué hace el equipo si se cae la base / una cola?"** — alinea con exactamente lo que demostraste (health real, retry de migraciones, SIGTERM).
+5. **"¿Qué se espera de este rol en términos de impacto en 6 meses?"** — madurez de carrera, no de "cuántas vacaciones".
+6. **"¿Cómo se toma una decisión técnica grande y quién puede vetarla?"** — cultura de arquitectura: si la respuesta es "no nos ponemos de acuerdo así nomás", es buena señal.
+
+No preguntes nada solo por sonar: cada pregunta tiene que alinearse con lo que ya mostraste — tu guía de líder técnico termina donde tu proyecto la respalda.
+
+---
+
 ## Las tres preguntas que "seguro" hacen (y el guion de 60 s)
 
 | Pregunta                                  | Guion (respuesta = war story o archivo)                                       |
